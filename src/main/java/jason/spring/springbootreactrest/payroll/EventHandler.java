@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import static jason.spring.springbootreactrest.payroll.WebSocketConfiguration.MESSAGE_PREFIX;
 
 @Component
-@RepositoryEventHandler
+@RepositoryEventHandler(Employee.class)
 public class EventHandler {
 
     private final SimpMessagingTemplate websocket;
