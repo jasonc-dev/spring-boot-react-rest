@@ -40300,7 +40300,8 @@ var App = /*#__PURE__*/function (_React$Component) {
       attributes: [],
       page: 1,
       pageSize: 2,
-      links: {}
+      links: {},
+      loggedInManager: _this.props.loggedInManager
     };
     _this.updatePageSize = _this.updatePageSize.bind(_assertThisInitialized(_this));
     _this.onCreate = _this.onCreate.bind(_assertThisInitialized(_this));
@@ -40330,6 +40331,17 @@ var App = /*#__PURE__*/function (_React$Component) {
             Accept: "application/schema+json"
           }
         }).then(function (schema) {
+          /**
+           * Filter unneeded JSON Schema properties, like uri references and
+           * subtypes ($ref).
+           */
+          Object.keys(schema.entity.properties).forEach(function (property) {
+            if (schema.entity.properties[property].hasOwnProperty("format") && schema.entity.properties[property].format === "uri") {
+              delete schema.entity.properties[property];
+            } else if (schema.entity.properties[property].hasOwnProperty("$ref")) {
+              delete schema.entity.properties[property];
+            }
+          });
           _this2.schema = schema.entity;
           _this2.links = employeeCollection.entity._links;
           return employeeCollection;
@@ -40371,20 +40383,29 @@ var App = /*#__PURE__*/function (_React$Component) {
   }, {
     key: "onUpdate",
     value: function onUpdate(employee, updatedEmployee) {
-      client({
-        method: "PUT",
-        path: employee.entity._links.self.href,
-        entity: updatedEmployee,
-        headers: {
-          "Content-Type": "application/json",
-          "If-Match": employee.headers.Etag
-        }
-      }).done(function (response) {// websocket handler updates the state
-      }, function (response) {
-        if (response.status.code === 412) {
-          alert("DENIED: Unable to update " + employee.entity._links.self.href + ". Your copy is stale.");
-        }
-      });
+      if (employee.entity.manager.name === this.state.loggedInManager) {
+        updatedEmployee["manager"] = employee.entity.manager;
+        client({
+          method: "PUT",
+          path: employee.entity._links.self.href,
+          entity: updatedEmployee,
+          headers: {
+            "Content-Type": "application/json",
+            "If-Match": employee.headers.Etag
+          }
+        }).done(function (response) {// websocket handler updates the state
+        }, function (response) {
+          if (response.status.code === 403) {
+            alert("ACCESS DENIED: You are not authorised to update " + employee.entity._links.self.href);
+          }
+
+          if (response.status.code === 412) {
+            alert("DENIED: Unable to update " + employee.entity._links.self.href + ". Your copy is stale.");
+          }
+        });
+      } else {
+        alert("You are not authorised to update");
+      }
     }
   }, {
     key: "onDelete",
@@ -40392,6 +40413,11 @@ var App = /*#__PURE__*/function (_React$Component) {
       client({
         method: "DELETE",
         path: employee.entity._links.self.href
+      }).done(function (response) {// websocket handles updating the UI
+      }, function (response) {
+        if (response.status.code === 403) {
+          alert("ACCESS DENIED: You are not authorised to delete " + employee.entity._links.self.href);
+        }
       });
     }
   }, {
@@ -40510,7 +40536,8 @@ var App = /*#__PURE__*/function (_React$Component) {
         onNavigate: this.onNavigate,
         onUpdate: this.onUpdate,
         onDelete: this.onDelete,
-        updatePageSize: this.updatePageSize
+        updatePageSize: this.updatePageSize,
+        loggedInManager: this.state.loggedInManager
       }));
     }
   }]);
@@ -40627,18 +40654,24 @@ var UpdateDialog = /*#__PURE__*/function (_React$Component3) {
         }));
       });
       var dialogId = "updateEmployee-" + this.props.employee.entity._links.self.href;
-      return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("a", {
-        href: "#" + dialogId
-      }, "Update"), /*#__PURE__*/React.createElement("div", {
-        id: dialogId,
-        className: "modalDialog"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("a", {
-        href: "#",
-        title: "Close",
-        className: "close"
-      }, "X"), /*#__PURE__*/React.createElement("h2", null, "Update an employee"), /*#__PURE__*/React.createElement("form", null, inputs, /*#__PURE__*/React.createElement("button", {
-        onClick: this.handleSubmit
-      }, "Update")))));
+      var isManagerCorrect = this.props.employee.entity.manager.name == this.props.loggedInManager;
+
+      if (isManagerCorrect === false) {
+        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("a", null, "Not your employee!"));
+      } else {
+        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("a", {
+          href: "#" + dialogId
+        }, "Update"), /*#__PURE__*/React.createElement("div", {
+          id: dialogId,
+          className: "modalDialog"
+        }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("a", {
+          href: "#",
+          title: "Close",
+          className: "close"
+        }, "X"), /*#__PURE__*/React.createElement("h2", null, "Update an employee"), /*#__PURE__*/React.createElement("form", null, inputs, /*#__PURE__*/React.createElement("button", {
+          onClick: this.handleSubmit
+        }, "Update")))));
+      }
     }
   }]);
 
@@ -40712,7 +40745,8 @@ var EmployeeList = /*#__PURE__*/function (_React$Component4) {
           employee: employee,
           attributes: _this12.props.attributes,
           onUpdate: _this12.props.onUpdate,
-          onDelete: _this12.props.onDelete
+          onDelete: _this12.props.onDelete,
+          loggedInManager: _this12.props.loggedInManager
         });
       });
       var navLinks = [];
@@ -40749,7 +40783,7 @@ var EmployeeList = /*#__PURE__*/function (_React$Component4) {
         ref: "pageSize",
         defaultValue: this.props.pageSize,
         onInput: this.handleInput
-      }), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "First Name"), /*#__PURE__*/React.createElement("th", null, "Last Name"), /*#__PURE__*/React.createElement("th", null, "Description"), /*#__PURE__*/React.createElement("th", null), /*#__PURE__*/React.createElement("th", null)), employees)), /*#__PURE__*/React.createElement("div", null, navLinks));
+      }), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "First Name"), /*#__PURE__*/React.createElement("th", null, "Last Name"), /*#__PURE__*/React.createElement("th", null, "Description"), /*#__PURE__*/React.createElement("th", null, "Manager"), /*#__PURE__*/React.createElement("th", null), /*#__PURE__*/React.createElement("th", null)), employees)), /*#__PURE__*/React.createElement("div", null, navLinks));
     }
   }]);
 
@@ -40779,10 +40813,11 @@ var Employee = /*#__PURE__*/function (_React$Component5) {
   }, {
     key: "render",
     value: function render() {
-      return /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, this.props.employee.entity.firstName), /*#__PURE__*/React.createElement("td", null, this.props.employee.entity.lastName), /*#__PURE__*/React.createElement("td", null, this.props.employee.entity.description), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(UpdateDialog, {
+      return /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, this.props.employee.entity.firstName), /*#__PURE__*/React.createElement("td", null, this.props.employee.entity.lastName), /*#__PURE__*/React.createElement("td", null, this.props.employee.entity.description), /*#__PURE__*/React.createElement("td", null, this.props.employee.entity.manager.name), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(UpdateDialog, {
         employee: this.props.employee,
         attributes: this.props.attributes,
-        onUpdate: this.props.onUpdate
+        onUpdate: this.props.onUpdate,
+        loggedInManager: this.props.loggedInManager
       })), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("button", {
         onClick: this.handleDelete
       }, "Delete")));
@@ -40792,7 +40827,9 @@ var Employee = /*#__PURE__*/function (_React$Component5) {
   return Employee;
 }(React.Component);
 
-ReactDOM.render( /*#__PURE__*/React.createElement(App, null), document.getElementById("react"));
+ReactDOM.render( /*#__PURE__*/React.createElement(App, {
+  loggedInManager: document.getElementById("managername").innerHTML
+}), document.getElementById("react"));
 
 /***/ }),
 
