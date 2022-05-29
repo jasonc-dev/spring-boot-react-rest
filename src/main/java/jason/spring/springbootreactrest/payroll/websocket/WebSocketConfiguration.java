@@ -1,4 +1,4 @@
-package jason.spring.springbootreactrest.payroll;
+package jason.spring.springbootreactrest.payroll.websocket;
 
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.stereotype.Component;

@@ -5,7 +5,7 @@ const ReactDOM = require("react-dom");
 const when = require("when");
 const client = require("./client");
 
-const follow = require("./follow");
+const follow = require("./follow"); // function to hop multiple links by "rel"
 
 const stompClient = require("./websocket-listener");
 
@@ -39,6 +39,7 @@ class App extends React.Component {
           path: employeeCollection.entity._links.profile.href,
           headers: { Accept: "application/schema+json" },
         }).then((schema) => {
+          // tag::json-schema-filter[]
           /**
            * Filter unneeded JSON Schema properties, like uri references and
            * subtypes ($ref).
@@ -59,6 +60,7 @@ class App extends React.Component {
           this.schema = schema.entity;
           this.links = employeeCollection.entity._links;
           return employeeCollection;
+          // end::json-schema-filter[]
         });
       })
       .then((employeeCollection) => {
@@ -84,6 +86,7 @@ class App extends React.Component {
       });
   }
 
+  // tag::on-create[]
   onCreate(newEmployee) {
     follow(client, root, ["employees"]).done((response) => {
       client({
@@ -94,7 +97,9 @@ class App extends React.Component {
       });
     });
   }
+  // end::on-create[]
 
+  // tag::on-update[]
   onUpdate(employee, updatedEmployee) {
     if (employee.entity.manager.name === this.state.loggedInManager) {
       updatedEmployee["manager"] = employee.entity.manager;
@@ -108,12 +113,12 @@ class App extends React.Component {
         },
       }).done(
         (response) => {
-          // websocket handler updates the state
+          /* Let the websocket handler update the state */
         },
         (response) => {
           if (response.status.code === 403) {
             alert(
-              "ACCESS DENIED: You are not authorised to update " +
+              "ACCESS DENIED: You are not authorized to update " +
                 employee.entity._links.self.href
             );
           }
@@ -127,25 +132,28 @@ class App extends React.Component {
         }
       );
     } else {
-      alert("You are not authorised to update");
+      alert("You are not authorized to update");
     }
   }
+  // end::on-update[]
 
+  // tag::on-delete[]
   onDelete(employee) {
     client({ method: "DELETE", path: employee.entity._links.self.href }).done(
       (response) => {
-        // websocket handles updating the UI
+        /* let the websocket handle updating the UI */
       },
       (response) => {
         if (response.status.code === 403) {
           alert(
-            "ACCESS DENIED: You are not authorised to delete " +
+            "ACCESS DENIED: You are not authorized to delete " +
               employee.entity._links.self.href
           );
         }
       }
     );
   }
+  // end::on-delete[]
 
   onNavigate(navUri) {
     client({
@@ -155,6 +163,7 @@ class App extends React.Component {
       .then((employeeCollection) => {
         this.links = employeeCollection.entity._links;
         this.page = employeeCollection.entity.page;
+
         return employeeCollection.entity._embedded.employees.map((employee) =>
           client({
             method: "GET",
@@ -182,6 +191,7 @@ class App extends React.Component {
     }
   }
 
+  // tag::websocket-handlers[]
   refreshAndGoToLastPage(message) {
     follow(client, root, [
       {
@@ -231,7 +241,9 @@ class App extends React.Component {
         });
       });
   }
+  // end::websocket-handlers[]
 
+  // tag::register-handlers[]
   componentDidMount() {
     this.loadFromServer(this.state.pageSize);
     stompClient.register([
@@ -240,6 +252,7 @@ class App extends React.Component {
       { route: "/topic/deleteEmployee", callback: this.refreshCurrentPage },
     ]);
   }
+  // end::register-handlers[]
 
   render() {
     return (
@@ -280,13 +293,9 @@ class CreateDialog extends React.Component {
       ).value.trim();
     });
     this.props.onCreate(newEmployee);
-
-    // clear out the dialogs input
     this.props.attributes.forEach((attribute) => {
-      ReactDOM.findDOMNode(this.refs[attribute]).value = "";
+      ReactDOM.findDOMNode(this.refs[attribute]).value = ""; // clear out the dialog's inputs
     });
-
-    // Navigate away from the dialog to hide it
     window.location = "#";
   }
 
@@ -301,16 +310,18 @@ class CreateDialog extends React.Component {
         />
       </p>
     ));
-
     return (
       <div>
         <a href="#createEmployee">Create</a>
+
         <div id="createEmployee" className="modalDialog">
           <div>
             <a href="#" title="Close" className="close">
               X
             </a>
+
             <h2>Create new employee</h2>
+
             <form>
               {inputs}
               <button onClick={this.handleSubmit}>Create</button>
@@ -352,6 +363,7 @@ class UpdateDialog extends React.Component {
         />
       </p>
     ));
+
     const dialogId =
       "updateEmployee-" + this.props.employee.entity._links.self.href;
 
@@ -361,19 +373,22 @@ class UpdateDialog extends React.Component {
     if (isManagerCorrect === false) {
       return (
         <div>
-          <a>Not your employee!</a>
+          <a>Not Your Employee</a>
         </div>
       );
     } else {
       return (
         <div>
           <a href={"#" + dialogId}>Update</a>
+
           <div id={dialogId} className="modalDialog">
             <div>
               <a href="#" title="Close" className="close">
                 X
               </a>
+
               <h2>Update an employee</h2>
+
               <form>
                 {inputs}
                 <button onClick={this.handleSubmit}>Update</button>
@@ -436,6 +451,7 @@ class EmployeeList extends React.Component {
         {this.props.page.totalPages}
       </h3>
     ) : null;
+
     const employees = this.props.employees.map((employee) => (
       <Employee
         key={employee.entity._links.self.href}
@@ -504,6 +520,7 @@ class EmployeeList extends React.Component {
   }
 }
 
+// tag::employee[]
 class Employee extends React.Component {
   constructor(props) {
     super(props);
@@ -536,6 +553,7 @@ class Employee extends React.Component {
     );
   }
 }
+// end::employee[]
 
 ReactDOM.render(
   <App loggedInManager={document.getElementById("managername").innerHTML} />,
