@@ -1,8 +1,11 @@
 package jason.spring.springbootreactrest.payroll;
 
+import net.minidev.json.annotate.JsonIgnore;
+
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Version;
 
 @Entity
 public class Employee {
@@ -11,6 +14,8 @@ public class Employee {
     private String firstName;
     private String lastName;
     private String description;
+
+    private @Version @JsonIgnore Long version;
 
     public Employee() {}
 
@@ -52,6 +57,14 @@ public class Employee {
         this.description = description;
     }
 
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -62,7 +75,9 @@ public class Employee {
         if (id != null ? !id.equals(employee.id) : employee.id != null) return false;
         if (firstName != null ? !firstName.equals(employee.firstName) : employee.firstName != null) return false;
         if (lastName != null ? !lastName.equals(employee.lastName) : employee.lastName != null) return false;
-        return description != null ? description.equals(employee.description) : employee.description == null;
+        if (description != null ? !description.equals(employee.description) : employee.description != null)
+            return false;
+        return version != null ? version.equals(employee.version) : employee.version == null;
     }
 
     @Override
@@ -71,6 +86,7 @@ public class Employee {
         result = 31 * result + (firstName != null ? firstName.hashCode() : 0);
         result = 31 * result + (lastName != null ? lastName.hashCode() : 0);
         result = 31 * result + (description != null ? description.hashCode() : 0);
+        result = 31 * result + (version != null ? version.hashCode() : 0);
         return result;
     }
 
@@ -81,6 +97,7 @@ public class Employee {
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", description='" + description + '\'' +
+                ", version=" + version +
                 '}';
     }
 }
