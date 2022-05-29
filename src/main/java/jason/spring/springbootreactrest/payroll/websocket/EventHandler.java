@@ -1,5 +1,6 @@
-package jason.spring.springbootreactrest.payroll;
+package jason.spring.springbootreactrest.payroll.websocket;
 
+import jason.spring.springbootreactrest.payroll.domain.Employee;
 import org.springframework.data.rest.core.annotation.HandleAfterCreate;
 import org.springframework.data.rest.core.annotation.HandleAfterDelete;
 import org.springframework.data.rest.core.annotation.HandleAfterSave;
@@ -8,7 +9,7 @@ import org.springframework.hateoas.server.EntityLinks;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
-import static jason.spring.springbootreactrest.payroll.WebSocketConfiguration.MESSAGE_PREFIX;
+import static jason.spring.springbootreactrest.payroll.websocket.WebSocketConfiguration.MESSAGE_PREFIX;
 
 @Component
 @RepositoryEventHandler(Employee.class)
